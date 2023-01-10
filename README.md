@@ -70,6 +70,7 @@ metadata:
   name: postgresql-backup
   namespace: shared
 spec:
+  # at minute 0 past every 8th hour
   schedule: 0 */8 * * *
   jobTemplate:
     spec:
@@ -77,40 +78,44 @@ spec:
         spec:
           containers:
             - name: postgresql-backup
-              image: nikitakoschelenko/postgres2s3:15.1
-              env:
-                - name: POSTGRES_HOST
-                  value: postgresql.shared
-                - name: POSTGRES_USER
-                  valueFrom:
-                    secretKeyRef:
-                      name: postgresql-backup-secret
-                      key: POSTGRES_USER
-                - name: POSTGRES_PASSWORD
-                  valueFrom:
-                    secretKeyRef:
-                      name: postgresql-backup-secret
-                      key: POSTGRES_PASSWORD
-                - name: S3_ENDPOINT
-                  value: http://minio.shared:9000/
-                - name: S3_ACCESS_KEY
-                  valueFrom:
-                    secretKeyRef:
-                      name: postgresql-backup-secret
-                      key: S3_ACCESS_KEY
-                - name: S3_SECRET_KEY
-                  valueFrom:
-                    secretKeyRef:
-                      name: postgresql-backup-secret
-                      key: S3_SECRET_KEY
-                - name: S3_BUCKET
-                  value: backups
-                - name: S3_PREFIX
-                  value: postresql/backup-
-                - name: ENCRYPTION_PASSWORD
-                  valueFrom:
-                    secretKeyRef:
-                      name: postgresql-backup-secret
-                      key: ENCRYPTION_PASSWORD
+              image: nikitakoschelenko/postgres2s3:15.1-rc.1
+              # use envFrom to load Secrets and ConfigMaps into environment variables
+              envFrom:
+                - configMapRef:
+                    name: postgresql-backup-configmap
+                - secretRef:
+                    name: postgresql-backup-secret
           restartPolicy: OnFailure
+```
+
+Use config map for not-secret configuration data:
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-backup-configmap
+  namespace: shared
+data:
+  POSTGRES_HOST: postgresql.shared
+  S3_ENDPOINT: http://minio.shared:9000/
+  S3_BUCKET: backups
+  S3_PREFIX: postresql/backup-
+```
+
+Use secrets for things which are actually secret:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgresql-backup-secret
+  namespace: shared
+type: Opaque
+data:
+  # base64 encode the values stored in a Kubernetes Secret: $ pbpaste | base64 | pbcopy
+  # the --decode flag is convenient: $ pbpaste | base64 --decode
+  POSTGRES_USER: cG9zdGdyZXM=
+  POSTGRES_PASSWORD: cG9zdGdyZXNwdw==
+  S3_ACCESS_KEY: YWNjZXNzS2V5
+  S3_SECRET_KEY: c2VjcmV0S2V5
+  ENCRYPTION_PASSWORD: c3VwZXJzZWNyZXRwYXNzd29yZA==
 ```
