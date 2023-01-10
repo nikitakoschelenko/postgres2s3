@@ -1,11 +1,8 @@
 FROM alpine:latest
 
-RUN apk update \
-	&& apk add coreutils \
-	&& apk add postgresql-client \
-	&& apk add python3 py3-pip && pip3 install --upgrade pip && pip3 install awscli \
-	&& apk add openssl \
-	&& rm -rf /var/cache/apk/*
+RUN apk update
+RUN apk add coreutils postgresql-client python3 py3-pip openssl --no-cache
+RUN pip3 install awscli
 
 COPY entrypoint.sh /entrypoint.sh
 
