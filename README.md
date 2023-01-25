@@ -99,7 +99,7 @@ data:
   POSTGRES_HOST: postgresql.shared
   S3_ENDPOINT: http://minio.shared:9000/
   S3_BUCKET: backups
-  S3_PREFIX: postresql/backup-
+  S3_FILE_PREFIX: postresql/backup-
 ```
 
 Use secrets for things which are actually secret:
